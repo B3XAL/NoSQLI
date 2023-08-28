@@ -1,4 +1,8 @@
 # NoSQLI
+'''python
+
+#!/usr/bin/python3
+
 
 from pwn import * <!--# jugar con las barras de progresos-->
 import requests <!--#hacer peticiones a servidores-->
@@ -46,3 +50,4 @@ def nosqli():
 main()
 
         nosqli()
+'''
